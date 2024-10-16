@@ -1,0 +1,190 @@
+---
+title: "2024 Field Fecundity"
+author: "Madison Sandquist"
+date: "2024-09-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Dowload packages 
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(zoo)
+library(lme4)
+library(lmerTest)
+library(rlang)
+library(broom.mixed)
+library(car)
+library(gridExtra)
+library(mgcv) #for GAMs
+library(gamm4)
+library(brms)
+```
+
+```{r}
+fecund <- read.csv("field_fecundity_9.12.24.csv")
+dissections <- read.csv("2023_2024_dissections.csv")
+fecund$Patient.ID <- as.character(fecund$Patient.ID)
+dissections$Patient.ID <- as.character(dissections$Patient.ID)
+```
+
+```{r}
+join <- dissections %>%
+  left_join(fecund, by = "Patient.ID") %>% 
+  filter(Species == "GPR")
+
+df1 <- join %>% 
+  select(Date,Patient.ID, Gonad.Stage, Fecundity, X..CV.Absolute.Fecundity, Notes, Sex,FL..mm.)
+```
+
+```{r}
+#makes sure everything is numeric 
+df1$FL..mm. <- as.integer(df1$FL..mm.)
+
+df2 <- df1 %>%
+  filter(X..CV.Absolute.Fecundity < 10) %>% 
+  mutate(log_Length = log(FL..mm.),
+         log_Fecundity = log(Fecundity)) %>% 
+  filter(FL..mm. < 380)  # There's a weird outlier at 384 mm for a gopher, so filtering it out
+  #mutate(Notes = ifelse(Notes == "", NA, Notes)) %>% 
+  #filter(is.na(Notes))  # Filter rows where Notes is NA
+
+# Perform linear regression for all stages 
+model <- lm(log_Fecundity ~ log_Length, data = df2)
+
+# Extract the coefficients
+a <- coef(model)[1]
+b <- coef(model)[2]
+
+# Calculate the original 'variable'
+variable <- exp(a)
+
+# Print the results
+cat("variable:", variable, "\n")
+cat("b:", b, "\n")
+
+# Optionally, print the model summary
+summary(model)
+
+# Generate the fitted values for plotting
+df2 <- df2 %>%
+  mutate(Fitted_Fecundity = variable * FL..mm.^b)
+
+#using EJ dick paper
+#Determine the overall range for Mom.Length
+overall_min_length <- min(df2$FL..mm.)
+overall_max_length <- max(df2$FL..mm.)
+length_seq <- seq(overall_min_length, overall_max_length, length.out = 100)
+
+# Calculate the y-values using the given equation
+equation_values <- 8.45e-05 * length_seq^3.706
+
+# Create a data frame for the custom equation line
+equation_df <- data.frame(Mom.Length = length_seq, Fecun = equation_values)
+
+
+#Plot the original data and the fitted curve
+ggplot(df2, aes(x = FL..mm., y = Fecundity, color=Gonad.Stage)) +
+  geom_point() +  # Original data points
+  geom_line(aes(y = Fitted_Fecundity), color = 'navy') +  # Fitted curve
+  labs(title = "Fecundity-Length Relationship from Field Collections",
+       x = "Length",
+       y = "Fecundity") +
+    scale_x_continuous(limits = c(250, NA)) +
+   geom_line(data = equation_df, aes(x = Mom.Length, y = Fecun), color = "black", linetype = "dashed", size = 1)+
+  theme_classic()
+
+
+```
+
+#Bayseian
+```{r}
+writeLines('PATH="${RTOOLS40_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
+```
+
+```{r}
+# Define the model with hierarchical structure
+# The formula y ~ 1 + log_length | gonad.stage reflects the nested structure
+brms_model <- brm(
+  log(Fecundity) ~ log(FL..mm.) + (1 + log(FL..mm.) | Gonad.Stage),
+  data = df2,
+
+  # Specify priors
+  prior = c(
+    prior(normal(0, 10), class = "Intercept"),        # Prior for intercept (ajk)
+    prior(normal(0, 5), class = "b", coef = "logFL..mm."),  # Normal prior for slope of log(FL..mm.)
+    prior(normal(0, 10), class = "sd"),               # Prior for random effects (ajk, bjk)
+    prior(normal(0, 10), class = "sigma", lb = 0)     # Half-normal prior for residual standard deviation (σk)
+  ),
+  
+  # Set up sampling parameters
+  iter = 2000, warmup = 500, chains = 4, cores = 4
+)
+
+# View the model summary
+summary(brms_model)
+
+# Plot the model diagnostics
+plot(brms_model)
+```
+
+#Old data
+```{r}
+old <- read.csv("Mcgregor_data.csv") %>% 
+  mutate(log_Length = log(TL),
+         log_Fecundity = log(Fecundity))
+
+# Perform linear regression for all stages 
+model <- lm(log_Fecundity ~ log_Length, data = old )
+
+# Extract the coefficients
+a <- coef(model)[1]
+b <- coef(model)[2]
+
+# Calculate the original 'variable'
+variable <- exp(a)
+
+# Print the results
+cat("variable:", variable, "\n")
+cat("b:", b, "\n")
+
+# Optionally, print the model summary
+summary(model)
+
+# Generate the fitted values for plotting
+old <- old %>%
+  mutate(Fitted_Fecundity = variable * TL^b)
+
+#using EJ dick paper
+#Determine the overall range for Mom.Length
+overall_min_length <- min(old$TL)
+overall_max_length <- max(old$TL)
+length_seq <- seq(overall_min_length, overall_max_length, length.out = 100)
+
+# Calculate the y-values using the given equation
+equation_values <- 8.45e-05 * length_seq^3.706
+
+# Create a data frame for the custom equation line
+equation_df <- data.frame(Mom.Length = length_seq, Fecun = equation_values)
+
+
+#Plot the original data and the fitted curve
+ggplot(old, aes(x = TL, y = Fecundity)) +
+  geom_point() +  # Original data points
+  geom_line(aes(y = Fitted_Fecundity), color = 'navy') +  # Fitted curve
+  labs(title = "Fecundity-Length Relationship from Field Collections",
+       x = "Length",
+       y = "Fecundity") +
+    scale_x_continuous(limits = c(200, NA)) +
+   geom_line(data = equation_df, aes(x = Mom.Length, y = Fecun), color = "black", linetype = "dashed", size = 1)+
+  theme_classic()
+```
+
+
+
