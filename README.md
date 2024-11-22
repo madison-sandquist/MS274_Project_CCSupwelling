@@ -1,4 +1,5 @@
-# MS274 Project - California Current System Upwelling
+# MS274 Project - Investigating Remotely Sensed Environmental Drivers of Rockfish Recruitment in the California Current System
+
 A repository for the MS 274 project at MLML fall 2024 semester. 
 
 ## Project Description 
