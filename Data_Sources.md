@@ -4,7 +4,7 @@ Monthly datasets will be downloaded from 2003-2019 for upwelling season months (
 
 [Data Source](https://data.remss.com/ccmp/v03.0/)
 
-Citation: 
+Citation: CCMP vector winds are produced by Remote Sensing Systems and sponsored by NASA. Data are available at www.remss.com
 
 ### 2) Sea surface temperature 
 Monthly datasets will be downloaded from 2003-2024 for upwelling season months (April-June)
