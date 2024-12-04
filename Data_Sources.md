@@ -1,10 +1,10 @@
 ## Data Downloads
 ### 1) Wind Speed and Direction
-Monthly datasets will be downloaded from 2003-2024 for upwelling season months (April-June)
+Monthly datasets will be downloaded from 2003-2019 for upwelling season months (April-June)
 
-[Data Source from 2003-2019](https://podaac.jpl.nasa.gov/dataset/WindSat-REMSS-L3U-v7.0.1a)
+[Data Source](https://data.remss.com/ccmp/v03.0/)
 
-Citation: Remote Sensing Systems. 2017. WindSat geolocated L3U SST data set. Ver. 7.0.1a. PO.DAAC, CA, USA. Dataset accessed [2024-10-21] at https://doi.org/10.5067/GHWSA-3UR7A
+Citation: 
 
 ### 2) Sea surface temperature 
 Monthly datasets will be downloaded from 2003-2024 for upwelling season months (April-June)
@@ -23,6 +23,3 @@ Entire CSV will be downloaded and cleaned in python
 [Data Source](https://coastwatch.pfeg.noaa.gov/erddap/files/FED_Rockfish_Catch/)
 
 
-## Potential Figures
-1) A time series of all the parameters from each of the datasets (SST from remote sensing, Wind speed and direction, and SST from ROMS)
-2) Two heat maps one from the SST of remote sensed data and one from the SST of the ROMS model 
